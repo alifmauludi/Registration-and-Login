@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 	"reglog/helper"
 	"reglog/user"
@@ -27,44 +26,53 @@ func (h *userHandler) RegisterUser(c *gin.Context) {
 	uni := ut.New(english, english)
 	trans, _ := uni.GetTranslator("en")
 	_ = enTranslations.RegisterDefaultTranslations(validate, trans)
-	var inputBind user.RegisterUserInputBind
+	var input user.RegisterUserInput
 
-	err := c.ShouldBindJSON(&inputBind)
+	err := c.ShouldBindJSON(&input)
 	if err != nil {
-		fmt.Println(inputBind.Name)
-		fmt.Println(inputBind.Email)
-		fmt.Println(inputBind.Password)
-
-		validation := user.RegisterUserInputVal{
-			Name:     inputBind.Name,
-			Email:    inputBind.Email,
-			Password: inputBind.Password,
-		}
-
-		err := validate.Struct(validation)
-
+		err := validate.Struct(&input)
 		errors := helper.FormatValidationError(err, trans)
-
-		fmt.Println(errors)
-
 		errorMessage := gin.H{"errors": errors}
-
-		response := helper.APIResponse("Register account failed!!", http.StatusUnprocessableEntity, "error", errorMessage)
+		response := helper.APIResponse("Register account failed!", http.StatusUnprocessableEntity, "error", errorMessage)
 		c.JSON(http.StatusUnprocessableEntity, response)
 		return
 	}
 
-	newUser, err := h.userService.RegisterUser(inputBind)
+	newUser, err := h.userService.RegisterUser(input)
 
 	if err != nil {
-		response := helper.APIResponse("Register account failed!", http.StatusBadRequest, "error", nil)
+		errorMessage := gin.H{"errors": err.Error()}
+		response := helper.APIResponse("Register account failed!", http.StatusBadRequest, "error", errorMessage)
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
 
 	formatter := user.FormatUser(newUser, "token")
-
 	response := helper.APIResponse("Register account success!", http.StatusOK, "success", formatter)
+	c.JSON(http.StatusOK, response)
+}
 
+func (h *userHandler) Login(c *gin.Context) {
+	var input user.LoginInput
+
+	err := c.ShouldBindJSON(&input)
+	if err != nil {
+		errors := helper.FormatValidationError(err, nil)
+		errorMessage := gin.H{"errors": errors}
+		response := helper.APIResponse("Login failed!", http.StatusUnprocessableEntity, "error", errorMessage)
+		c.JSON(http.StatusUnprocessableEntity, response)
+		return
+	}
+
+	loggedinUser, err := h.userService.Login(input)
+	if err != nil {
+		errorMessage := gin.H{"errors": err.Error()}
+		response := helper.APIResponse("Login failed!", http.StatusUnprocessableEntity, "error", errorMessage)
+		c.JSON(http.StatusUnprocessableEntity, response)
+		return
+	}
+
+	formatter := user.FormatUser(loggedinUser, "token")
+	response := helper.APIResponse("Successfuly loggedin", http.StatusOK, "success", formatter)
 	c.JSON(http.StatusOK, response)
 }
