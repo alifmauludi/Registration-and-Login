@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"reglog/auth"
 	"reglog/handler"
 	"reglog/user"
 	"time"
@@ -35,8 +36,9 @@ func main() {
 
 	userRepository := user.NewRepository(db)
 	userService := user.NewService(userRepository)
+	authService := auth.NewService()
 
-	userHandler := handler.NewUserHandler(userService)
+	userHandler := handler.NewUserHandler(userService, authService)
 
 	router := gin.Default()
 
@@ -44,6 +46,7 @@ func main() {
 
 	api.POST("/user", userHandler.RegisterUser)
 	api.POST("/session", userHandler.Login)
+	api.POST("/avatar", userHandler.UploadAvatar)
 
 	router.Run()
 }
